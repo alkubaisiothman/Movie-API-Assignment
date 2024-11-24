@@ -77,3 +77,31 @@ INSERT INTO Favorite (UserID, MovieID) VALUES
 ((SELECT UserID FROM MovieUser WHERE Username = 'boss'), (SELECT MovieID FROM Movie WHERE Name = 'The Terminator'));
 
 
+--Checking that all tables are showing their contents
+
+SELECT * from genre;
+
+SELECT * FROM movie;
+
+SELECT * FROM profile;
+
+SELECT * FROM review;
+
+SELECT * FROM favorite;
+
+--Testing tables with more complex queries
+
+SELECT movie.movie_name, movie.year, genre.genre_name
+FROM movie
+JOIN genre ON movie.genre_id = genre.id;
+
+SELECT profile.profile_name, review.stars, review.review_text
+FROM review
+JOIN profile ON review.profile_id = profile.id
+WHERE review.movie_id = 2;  -- Movie ID 2 is "The Terminator"
+
+
+SELECT movie.movie_name
+FROM favorite
+JOIN movie ON favorite.movie_id = movie.id
+WHERE favorite.profile_id = 3;  -- Profile ID 1 is "Reima Riihimäki"

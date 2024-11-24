@@ -7,7 +7,7 @@ app.use(express.json());
 
 // Pääsivu
 app.get('/', (req, res) => {
-    res.send('Welcome to the Movie Service API!');
+    res.send('<h1>Welcome to the Movie Api!</h1>');
 });
 // Simuloidaan tietokantoja taulukoilla
 let genres = [];
