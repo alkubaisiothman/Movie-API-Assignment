@@ -1,25 +1,23 @@
-import express from 'express';
-import { client } from './client.js'; // Tuo client.js
+import pg from "pg";
+import dotenv from 'dotenv';
 
-const app = express();
-app.use(express.json());
+dotenv.config();
 
-app.post('/genres', async (req, res) => {
-    const { name } = req.body;
-    if (!name) {
-        return res.status(400).json({ error: 'Genre name is required' });
-    }
-    try {
-        const result = await client.query('INSERT INTO Genre (Name) VALUES ($1) RETURNING *', [name]);
-        res.status(201).json({ message: 'Genre added successfully', genre: result.rows[0] });
-    } catch (error) {
-        if (error.code === '23505') { // UNIQUE constraint violation
-            res.status(400).json({ error: 'Genre already exists' });
-        } else {
-            console.error(error);
-            res.status(500).json({ error: 'Database error' });
-        }
-    }
+const { Client } = pg;
+
+export const client = new Client({
+    user: process.env.DB_USERNAME,
+    password: process.env.DB_PASSWORD,
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    database: process.env.DB_DATABASE,
 });
 
-// Lisää muut endpointit samalla tavalla...
+(async () => {
+    try {
+        await client.connect();
+        console.log('Database connected!');
+    } catch (err) {
+        console.error('Database connection error:', err);
+    }
+})();
