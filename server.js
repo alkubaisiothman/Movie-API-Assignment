@@ -152,10 +152,40 @@ app.post('/reviews', async (req, res) => {
 });
 
 // 8. Adding favorite movies
-
+app.post('/favorites', async (req, res) => {
+    const { username, movieId } = req.body;
+    if (!username || !movieId) {
+        return res.status(400).json({ error: 'Username and movie ID are required' });
+    }
+    try {
+        const result = await client.query(
+            'INSERT INTO Favorite (Username, MovieID) VALUES ($1, $2) RETURNING *',
+            [username, movieId]
+        );
+        res.status(201).json({ message: 'Favorite added successfully', favorite: result.rows[0] });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
 
 // 9. Getting favorite movies by username
+app.get('/favorites/:username', async (req, res) => {
+    const username = req.params.username;
 
+    try {
+        const result = await client.query(
+            `SELECT m.* FROM Favorite f
+             JOIN Movie m ON f.MovieID = m.MovieID
+             WHERE f.Username = $1`,
+            [username]
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
