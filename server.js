@@ -10,6 +10,7 @@ app.get('/', (req, res) => {
     res.send('<h1>Welcome to the Movie API!</h1>');
 });
 
+// 1. Adding new genres
 app.post('/genres', async (req, res) => {
     const { name } = req.body;
     if (!name) {
@@ -38,6 +39,7 @@ app.get('/genres', async (req, res) => {
     }
 });
 
+// 2. Adding new movies
 app.post('/movies', async (req, res) => {
     const { name, year, genre } = req.body;
     if (!name || !year || !genre) {
@@ -60,9 +62,19 @@ app.post('/movies', async (req, res) => {
     }
 });
 
+// 3. Getting all movies with pagination
 app.get('/movies', async (req, res) => {
+    const { page = 1 } = req.query;
+    const limit = 10;
+    const offset = (page - 1) * limit;
     try {
-        const result = await client.query('SELECT * FROM Movie');
+        const result = await client.query(
+            `SELECT m.MovieID, m.Name, m.Year, g.Name as Genre
+             FROM Movie m
+             JOIN Genre g ON m.GenreID = g.GenreID
+             LIMIT $1 OFFSET $2`,
+            [limit, offset]
+        );
         res.json(result.rows);
     } catch (error) {
         console.error(error);
@@ -70,6 +82,7 @@ app.get('/movies', async (req, res) => {
     }
 });
 
+// 4. Getting movie by id
 app.get('/movies/:id', async (req, res) => {
     const movieId = parseInt(req.params.id);
     try {
@@ -89,6 +102,32 @@ app.get('/movies/:id', async (req, res) => {
         res.status(500).json({ error: 'Database error' });
     }
 });
+
+// 5. Removing movie by id
+app.delete('/movies/:id', async (req, res) => {
+    const movieId = parseInt(req.params.id);
+    try {
+        const result = await client.query('DELETE FROM Movie WHERE MovieID = $1 RETURNING *', [movieId]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Movie not found' });
+        }
+        res.json({ message: 'Movie deleted successfully', movie: result.rows[0] });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+// 6. Searching movies by keyword
+
+// 7. Adding movie review
+
+
+// 8. Adding favorite movies
+
+
+// 9. Getting favorite movies by username
+
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
