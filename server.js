@@ -119,6 +119,19 @@ app.delete('/movies/:id', async (req, res) => {
 });
 
 // 6. Searching movies by keyword
+app.get('/movies/page/:pageNumber', async (req, res) => {
+    const pageNumber = parseInt(req.params.pageNumber);
+    const pageSize = 10;
+    const offset = (pageNumber - 1) * pageSize;
+
+    try {
+        const result = await client.query('SELECT * FROM Movie LIMIT $1 OFFSET $2', [pageSize, offset]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
 
 // 7. Adding movie review
 
