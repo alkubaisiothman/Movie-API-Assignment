@@ -134,7 +134,22 @@ app.get('/movies/page/:pageNumber', async (req, res) => {
 });
 
 // 7. Adding movie review
-
+app.post('/reviews', async (req, res) => {
+    const { username, stars, reviewText, movieId } = req.body;
+    if (!username || !stars || !reviewText || !movieId) {
+        return res.status(400).json({ error: 'All fields are required' });
+    }
+    try {
+        const result = await client.query(
+            'INSERT INTO Review (Username, Stars, ReviewText, MovieID) VALUES ($1, $2, $3, $4) RETURNING *',
+            [username, stars, reviewText, movieId]
+        );
+        res.status(201).json({ message: 'Review added successfully', review: result.rows[0] });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
 
 // 8. Adding favorite movies
 
