@@ -1,5 +1,6 @@
 import express from 'express';
 import { client } from './client.js';
+import bcrypt from 'bcrypt';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -20,12 +21,7 @@ app.post('/genres', async (req, res) => {
         const result = await client.query('INSERT INTO Genre (Name) VALUES ($1) RETURNING *', [name]);
         res.status(201).json({ message: 'Genre added successfully', genre: result.rows[0] });
     } catch (error) {
-        if (error.code === '23505') {
-            res.status(400).json({ error: 'Genre already exists' });
-        } else {
-            console.error(error);
-            res.status(500).json({ error: 'Database error' });
-        }
+        res.status(400).json({ error: error.detail || 'Error adding genre' });
     }
 });
 
@@ -34,7 +30,6 @@ app.get('/genres', async (req, res) => {
         const result = await client.query('SELECT * FROM Genre');
         res.json(result.rows);
     } catch (error) {
-        console.error(error);
         res.status(500).json({ error: 'Database error' });
     }
 });
@@ -57,7 +52,6 @@ app.post('/movies', async (req, res) => {
         );
         res.status(201).json({ message: 'Movie added successfully', movie: result.rows[0] });
     } catch (error) {
-        console.error(error);
         res.status(500).json({ error: 'Database error' });
     }
 });
@@ -77,7 +71,6 @@ app.get('/movies', async (req, res) => {
         );
         res.json(result.rows);
     } catch (error) {
-        console.error(error);
         res.status(500).json({ error: 'Database error' });
     }
 });
@@ -98,7 +91,6 @@ app.get('/movies/:id', async (req, res) => {
         }
         res.json(result.rows[0]);
     } catch (error) {
-        console.error(error);
         res.status(500).json({ error: 'Database error' });
     }
 });
@@ -113,27 +105,49 @@ app.delete('/movies/:id', async (req, res) => {
         }
         res.json({ message: 'Movie deleted successfully', movie: result.rows[0] });
     } catch (error) {
-        console.error(error);
         res.status(500).json({ error: 'Database error' });
     }
 });
 
 // 6. Searching movies by keyword
-app.get('/movies/page/:pageNumber', async (req, res) => {
-    const pageNumber = parseInt(req.params.pageNumber);
-    const pageSize = 10;
-    const offset = (pageNumber - 1) * pageSize;
-
+app.get('/movies/search', async (req, res) => {
+    const { keyword } = req.query;
+    if (!keyword) {
+        return res.status(400).json({ error: 'Keyword is required' });
+    }
     try {
-        const result = await client.query('SELECT * FROM Movie LIMIT $1 OFFSET $2', [pageSize, offset]);
+        const result = await client.query(
+            `SELECT m.MovieID, m.Name, m.Year, g.Name as Genre
+             FROM Movie m
+             JOIN Genre g ON m.GenreID = g.GenreID
+             WHERE m.Name ILIKE $1`,
+            [`%${keyword}%`]
+        );
         res.json(result.rows);
     } catch (error) {
-        console.error(error);
         res.status(500).json({ error: 'Database error' });
     }
 });
 
-// 7. Adding movie review
+// 7. Adding user registration with hashed passwords
+app.post('/users', async (req, res) => {
+    const { name, username, password, yearOfBirth } = req.body;
+    if (!name || !username || !password || !yearOfBirth) {
+        return res.status(400).json({ error: 'All fields are required' });
+    }
+    try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const result = await client.query(
+            'INSERT INTO MovieUser (Name, Username, Password, YearOfBirth) VALUES ($1, $2, $3, $4) RETURNING *',
+            [name, username, hashedPassword, yearOfBirth]
+        );
+        res.status(201).json({ message: 'User registered successfully', user: result.rows[0] });
+    } catch (error) {
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+// 8. Adding movie reviews
 app.post('/reviews', async (req, res) => {
     const { username, stars, reviewText, movieId } = req.body;
     if (!username || !stars || !reviewText || !movieId) {
@@ -146,12 +160,11 @@ app.post('/reviews', async (req, res) => {
         );
         res.status(201).json({ message: 'Review added successfully', review: result.rows[0] });
     } catch (error) {
-        console.error(error);
         res.status(500).json({ error: 'Database error' });
     }
 });
 
-// 8. Adding favorite movies
+// 9. Adding favorite movies
 app.post('/favorites', async (req, res) => {
     const { username, movieId } = req.body;
     if (!username || !movieId) {
@@ -164,15 +177,13 @@ app.post('/favorites', async (req, res) => {
         );
         res.status(201).json({ message: 'Favorite added successfully', favorite: result.rows[0] });
     } catch (error) {
-        console.error(error);
         res.status(500).json({ error: 'Database error' });
     }
 });
 
-// 9. Getting favorite movies by username
+// 10. Getting favorite movies by username
 app.get('/favorites/:username', async (req, res) => {
     const username = req.params.username;
-
     try {
         const result = await client.query(
             `SELECT m.* FROM Favorite f
@@ -182,7 +193,6 @@ app.get('/favorites/:username', async (req, res) => {
         );
         res.json(result.rows);
     } catch (error) {
-        console.error(error);
         res.status(500).json({ error: 'Database error' });
     }
 });
