@@ -197,6 +197,37 @@ app.get('/favorites/:username', async (req, res) => {
     }
 });
 
+// 13. Providing statistics and analytics
+app.get('/stats', async (req, res) => {
+    try {
+        const topMovies = await client.query(
+            `SELECT m.Name, AVG(r.Stars) AS avg_rating, COUNT(r.ReviewID) AS review_count
+             FROM Movie m
+             JOIN Review r ON m.MovieID = r.MovieID
+             GROUP BY m.Name
+             ORDER BY avg_rating DESC
+             LIMIT 5`
+        );
+
+        const popularGenres = await client.query(
+            `SELECT g.Name, COUNT(f.MovieID) AS favorite_count
+             FROM Genre g
+             JOIN Movie m ON g.GenreID = m.GenreID
+             JOIN Favorite f ON m.MovieID = f.MovieID
+             GROUP BY g.Name
+             ORDER BY favorite_count DESC
+             LIMIT 5`
+        );
+
+        res.json({
+            topMovies: topMovies.rows,
+            popularGenres: popularGenres.rows,
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
